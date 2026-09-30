@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
@@ -35,39 +36,53 @@ fun HistoryScreen(
     val sessions by historyRepo.sessions.collectAsState()
     val c = focoColors()
 
+    val empty = sessions.isEmpty()
     FocoPage(
         modifier = modifier,
-        centerContent = false,
+        centerContent = empty,
         scrollable = true
     ) { compact ->
         val gap = if (compact) 12.dp else 8.dp
-        HudLink(text = Strings.BACK_TIMER, onClick = onBack)
+        HudLink(
+            text = Strings.BACK_TIMER,
+            onClick = onBack,
+            modifier = if (empty) Modifier.align(Alignment.CenterHorizontally) else Modifier
+        )
         Spacer(Modifier.height(gap))
-        HudTitle(Strings.HISTORY_TITLE)
+        HudTitle(
+            Strings.HISTORY_TITLE,
+            modifier = if (empty) Modifier.align(Alignment.CenterHorizontally) else Modifier
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             Strings.HISTORY_NOTE,
             color = c.muted,
-            fontSize = 12.sp
+            fontSize = 12.sp,
+            modifier = if (empty) Modifier.align(Alignment.CenterHorizontally) else Modifier
         )
         Spacer(Modifier.height(if (compact) 16.dp else 12.dp))
 
-        if (sessions.isEmpty()) {
+        if (empty) {
             Text(
                 Strings.HISTORY_EMPTY_TITLE,
                 color = c.fg,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                letterSpacing = 1.sp
+                letterSpacing = 1.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 Strings.HISTORY_EMPTY_BODY,
                 color = c.muted,
-                fontSize = 13.sp
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 sessions.forEach { session ->
                     SessionRow(session)
                 }

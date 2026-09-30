@@ -103,35 +103,8 @@ val FocoPanelMaxWidth = 448.dp
 val FocoPhonePadding = 18.dp
 
 /**
- * Light HUD accents: L-shaped corner brackets only — not a closed full-screen frame.
- * Used on compact phone layouts after removing the outer HudCard neon rectangle.
- */
-fun Modifier.hudCornerAccents(
-    color: Color,
-    arm: Dp = 18.dp,
-    stroke: Dp = 2.dp
-): Modifier = this.drawBehind {
-    val a = arm.toPx()
-    val s = stroke.toPx()
-    val w = size.width
-    val h = size.height
-    // top-left
-    drawLine(color, Offset(0f, 0f), Offset(a, 0f), strokeWidth = s)
-    drawLine(color, Offset(0f, 0f), Offset(0f, a), strokeWidth = s)
-    // top-right
-    drawLine(color, Offset(w, 0f), Offset(w - a, 0f), strokeWidth = s)
-    drawLine(color, Offset(w, 0f), Offset(w, a), strokeWidth = s)
-    // bottom-left
-    drawLine(color, Offset(0f, h), Offset(a, h), strokeWidth = s)
-    drawLine(color, Offset(0f, h), Offset(0f, h - a), strokeWidth = s)
-    // bottom-right
-    drawLine(color, Offset(w, h), Offset(w - a, h), strokeWidth = s)
-    drawLine(color, Offset(w, h), Offset(w, h - a), strokeWidth = s)
-}
-
-/**
  * Page shell with width breakpoint:
- * - compact (phone): edge-to-safe-area, light corner brackets, no outer HudCard frame
+ * - compact (phone): edge-to-safe-area, full-bleed — no outer frame / L-corners
  * - expanded (tablet/landscape): centered neon HudCard panel (web-like)
  */
 @Composable
@@ -149,38 +122,50 @@ fun FocoPage(
             .focoScrim(c)
     ) {
         val compact = maxWidth < FocoCompactWidthMax
-        val scrollMod = if (scrollable) {
-            Modifier.verticalScroll(rememberScrollState())
-        } else {
-            Modifier
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .then(scrollMod)
                 .padding(
                     horizontal = if (compact) FocoPhonePadding else 12.dp,
                     vertical = if (compact) 16.dp else 24.dp
                 ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = if (centerContent) Arrangement.Center else Arrangement.Top
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (compact) {
-                Column(
-                    modifier = Modifier
+            // Nested constraints so Arrangement.Center works with verticalScroll
+            // (scrollables otherwise shrink-wrap content and ignore vertical arrangement).
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val bodyMod = when {
+                    scrollable -> Modifier
                         .fillMaxWidth()
-                        .hudCornerAccents(c.border.copy(alpha = 0.9f))
-                        .padding(horizontal = 6.dp, vertical = 10.dp)
-                ) {
-                    content(true)
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = maxHeight)
+                    centerContent -> Modifier.fillMaxSize()
+                    else -> Modifier.fillMaxWidth()
                 }
-            } else {
-                HudCard(modifier = Modifier.widthIn(max = FocoPanelMaxWidth)) {
-                    content(false)
+                Column(
+                    modifier = bodyMod,
+                    horizontalAlignment = if (centerContent) {
+                        Alignment.CenterHorizontally
+                    } else {
+                        Alignment.Start
+                    },
+                    verticalArrangement = if (centerContent) Arrangement.Center else Arrangement.Top
+                ) {
+                    if (compact) {
+                        content(true)
+                    } else {
+                        HudCard(modifier = Modifier.widthIn(max = FocoPanelMaxWidth)) {
+                            content(false)
+                        }
+                    }
+                    belowPanel?.invoke(this, compact)
                 }
             }
-            belowPanel?.invoke(this, compact)
         }
     }
 }
