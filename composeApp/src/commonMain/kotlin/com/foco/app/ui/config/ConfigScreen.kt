@@ -9,13 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,13 +27,12 @@ import com.foco.app.domain.ConfigViewModel
 import com.foco.app.domain.DurationUnit
 import com.foco.app.domain.ThemeMode
 import com.foco.app.ui.Strings
+import com.foco.app.ui.components.FocoPage
 import com.foco.app.ui.components.HudButton
-import com.foco.app.ui.components.HudCard
 import com.foco.app.ui.components.HudLink
 import com.foco.app.ui.components.HudSectionLabel
 import com.foco.app.ui.components.HudTextField
 import com.foco.app.ui.components.HudTitle
-import com.foco.app.ui.components.focoScrim
 import com.foco.app.ui.theme.focoColors
 
 @Composable
@@ -53,23 +48,16 @@ fun ConfigScreen(
     val c = focoColors()
     val connected = spotifyOn || config.spotifyConnected
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .focoScrim(c)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            HudCard(modifier = Modifier.widthIn(max = 448.dp)) {
+    FocoPage(
+        modifier = modifier,
+        centerContent = false,
+        scrollable = true
+    ) { compact ->
+                val sectionGap = if (compact) 20.dp else 16.dp
                 HudLink(text = Strings.BACK_TIMER, onClick = onBack)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(if (compact) 12.dp else 8.dp))
                 HudTitle(Strings.CONFIG_TITLE)
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(sectionGap))
 
                 HudSectionLabel(Strings.DURATIONS)
                 Spacer(Modifier.height(6.dp))
@@ -124,7 +112,7 @@ fun ConfigScreen(
                     }
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(sectionGap))
                 HudSectionLabel(Strings.ALERTA)
                 Spacer(Modifier.height(8.dp))
                 HudToggle(Strings.SOUND, config.soundEnabled) { viewModel.setSound(it) }
@@ -133,7 +121,7 @@ fun ConfigScreen(
                     viewModel.setNotifications(it)
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(sectionGap))
                 HudSectionLabel(Strings.THEME)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -151,7 +139,7 @@ fun ConfigScreen(
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(sectionGap))
                 HudSectionLabel(Strings.DEFAULT_SESSION_NAME)
                 Spacer(Modifier.height(4.dp))
                 HudTextField(
@@ -163,7 +151,7 @@ fun ConfigScreen(
                     placeholder = Strings.SESSION_PLACEHOLDER
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(sectionGap))
                 HudSectionLabel(Strings.SPOTIFY)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -200,8 +188,6 @@ fun ConfigScreen(
                 HudToggle(Strings.PAUSE_ON_FOCUS_END, config.pauseSpotifyOnFocusEnd) {
                     viewModel.setPauseSpotifyOnEnd(it)
                 }
-            }
-        }
     }
 }
 

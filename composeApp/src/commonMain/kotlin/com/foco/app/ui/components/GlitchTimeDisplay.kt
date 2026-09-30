@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foco.app.ui.theme.focoColors
@@ -68,7 +69,8 @@ fun GlitchTimeDisplay(
     reduceMotion: Boolean,
     statusLabel: String,
     running: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    digitSize: TextUnit = 56.sp
 ) {
     // reduceMotion is Activity-stable → safe to branch away from animation clocks.
     if (reduceMotion) {
@@ -76,7 +78,8 @@ fun GlitchTimeDisplay(
             seconds = seconds,
             statusLabel = statusLabel,
             running = running,
-            modifier = modifier
+            modifier = modifier,
+            digitSize = digitSize
         )
     } else {
         AnimatedGlitchTimeDisplay(
@@ -84,7 +87,8 @@ fun GlitchTimeDisplay(
             tick = tick,
             statusLabel = statusLabel,
             running = running,
-            modifier = modifier
+            modifier = modifier,
+            digitSize = digitSize
         )
     }
 }
@@ -136,7 +140,7 @@ private fun TimerChrome(
                     )
                 }
             }
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .padding(horizontal = 12.dp, vertical = 18.dp),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -148,7 +152,8 @@ private fun StaticTimeDisplay(
     seconds: Int,
     statusLabel: String,
     running: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    digitSize: TextUnit = 56.sp
 ) {
     val c = focoColors()
     val text = formatTimer(seconds)
@@ -158,7 +163,7 @@ private fun StaticTimeDisplay(
                 Text(
                     text = text,
                     color = c.fg,
-                    fontSize = 56.sp,
+                    fontSize = digitSize,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = (-2).sp
@@ -182,7 +187,8 @@ private fun AnimatedGlitchTimeDisplay(
     tick: Long,
     statusLabel: String,
     running: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    digitSize: TextUnit = 56.sp
 ) {
     val c = focoColors()
     val text = formatTimer(seconds)
@@ -240,7 +246,7 @@ private fun AnimatedGlitchTimeDisplay(
                         Text(
                             text = text,
                             color = c.glitchA.copy(alpha = 0.75f),
-                            fontSize = 56.sp,
+                            fontSize = digitSize,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             letterSpacing = (-2).sp,
@@ -254,7 +260,7 @@ private fun AnimatedGlitchTimeDisplay(
                         Text(
                             text = text,
                             color = c.glitchB.copy(alpha = 0.65f),
-                            fontSize = 56.sp,
+                            fontSize = digitSize,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             letterSpacing = (-2).sp,
@@ -269,7 +275,7 @@ private fun AnimatedGlitchTimeDisplay(
                     Text(
                         text = text,
                         color = c.fg,
-                        fontSize = 56.sp,
+                        fontSize = digitSize,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
                         letterSpacing = (-2).sp,

@@ -10,20 +10,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -83,6 +90,98 @@ fun Modifier.focoScrim(colors: FocoColors): Modifier = this.drawBehind {
     while (y < size.height) {
         drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
         y += step
+    }
+}
+
+/** Material compact/expanded breakpoint — phone portrait is compact. */
+val FocoCompactWidthMax = 600.dp
+
+/** Centered panel max width (web-like) for tablet / landscape. */
+val FocoPanelMaxWidth = 448.dp
+
+/** Phone edge padding (~16–20dp). */
+val FocoPhonePadding = 18.dp
+
+/**
+ * Light HUD accents: L-shaped corner brackets only — not a closed full-screen frame.
+ * Used on compact phone layouts after removing the outer HudCard neon rectangle.
+ */
+fun Modifier.hudCornerAccents(
+    color: Color,
+    arm: Dp = 18.dp,
+    stroke: Dp = 2.dp
+): Modifier = this.drawBehind {
+    val a = arm.toPx()
+    val s = stroke.toPx()
+    val w = size.width
+    val h = size.height
+    // top-left
+    drawLine(color, Offset(0f, 0f), Offset(a, 0f), strokeWidth = s)
+    drawLine(color, Offset(0f, 0f), Offset(0f, a), strokeWidth = s)
+    // top-right
+    drawLine(color, Offset(w, 0f), Offset(w - a, 0f), strokeWidth = s)
+    drawLine(color, Offset(w, 0f), Offset(w, a), strokeWidth = s)
+    // bottom-left
+    drawLine(color, Offset(0f, h), Offset(a, h), strokeWidth = s)
+    drawLine(color, Offset(0f, h), Offset(0f, h - a), strokeWidth = s)
+    // bottom-right
+    drawLine(color, Offset(w, h), Offset(w - a, h), strokeWidth = s)
+    drawLine(color, Offset(w, h), Offset(w, h - a), strokeWidth = s)
+}
+
+/**
+ * Page shell with width breakpoint:
+ * - compact (phone): edge-to-safe-area, light corner brackets, no outer HudCard frame
+ * - expanded (tablet/landscape): centered neon HudCard panel (web-like)
+ */
+@Composable
+fun FocoPage(
+    modifier: Modifier = Modifier,
+    centerContent: Boolean = false,
+    scrollable: Boolean = true,
+    belowPanel: (@Composable ColumnScope.(compact: Boolean) -> Unit)? = null,
+    content: @Composable ColumnScope.(compact: Boolean) -> Unit
+) {
+    val c = focoColors()
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .focoScrim(c)
+    ) {
+        val compact = maxWidth < FocoCompactWidthMax
+        val scrollMod = if (scrollable) {
+            Modifier.verticalScroll(rememberScrollState())
+        } else {
+            Modifier
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .then(scrollMod)
+                .padding(
+                    horizontal = if (compact) FocoPhonePadding else 12.dp,
+                    vertical = if (compact) 16.dp else 24.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = if (centerContent) Arrangement.Center else Arrangement.Top
+        ) {
+            if (compact) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .hudCornerAccents(c.border.copy(alpha = 0.9f))
+                        .padding(horizontal = 6.dp, vertical = 10.dp)
+                ) {
+                    content(true)
+                }
+            } else {
+                HudCard(modifier = Modifier.widthIn(max = FocoPanelMaxWidth)) {
+                    content(false)
+                }
+            }
+            belowPanel?.invoke(this, compact)
+        }
     }
 }
 
