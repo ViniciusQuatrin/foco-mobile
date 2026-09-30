@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx
+*.apk
+*.ap_
+*.aab
+xcuserdata/
+Pods/
+*.xcworkspace
+!default.xcworkspace
+DerivedData/
+secrets.properties
+*.keystore
+spotify.secrets
+
+# Android signing keystores
+*.jks
