@@ -66,6 +66,8 @@ data class FocoColors(
     val isDark: Boolean
 )
 
+val LocalReduceMotion = staticCompositionLocalOf { false }
+
 val LocalFocoColors = staticCompositionLocalOf {
     FocoColors(
         bg = FocoDark.bg,

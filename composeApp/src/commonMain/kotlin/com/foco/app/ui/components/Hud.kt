@@ -1,5 +1,11 @@
 package com.foco.app.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,18 +26,22 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -44,6 +54,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foco.app.ui.theme.FocoColors
+import com.foco.app.ui.theme.LocalReduceMotion
 import com.foco.app.ui.theme.focoColors
 
 /** Scanline + corner glow page background matching web body. */
@@ -99,20 +110,128 @@ fun Modifier.neonBorder(
     drawRect(color = color, style = Stroke(width = stroke))
 }
 
+/**
+ * Web parity for `.page::before/::after` shell-glitch-a/b:
+ * duplicate offset strokes in glitch-a (#ff2a6d) / glitch-b (#05d9e8) /
+ * glitch-c (#f9f002) with stepped jitter + partial clips.
+ * When [enabled] is false (reduced motion), draws nothing — static neon only.
+ */
+@Composable
+fun Modifier.shellGlitchBorder(
+    glitchA: Color,
+    glitchB: Color,
+    glitchC: Color,
+    enabled: Boolean,
+    width: Dp = 3.dp
+): Modifier {
+    // Hooks always run; [enabled] only gates drawing (reduced-motion → static neon).
+    val transition = rememberInfiniteTransition(label = "shell-glitch")
+    val phaseA by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2100, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shell-a"
+    )
+    val phaseB by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1750, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shell-b"
+    )
+    if (!enabled) return this
+    return this.drawWithContent {
+        drawContent()
+        val stroke = width.toPx()
+        val inset = 3.dp.toPx()
+
+        // shell-glitch-a keyframes (steps feel via discrete bands)
+        val burstA = phaseA >= 0.86f && phaseA < 0.94f
+        val (oxA, oyA, clipA) = when {
+            !burstA -> Triple(0f, 0f, Rect(0f, 0f, size.width, size.height))
+            phaseA < 0.88f -> Triple(-2.dp.toPx(), 1.dp.toPx(), Rect(0f, 0f, size.width, size.height * 0.28f))
+            phaseA < 0.90f -> Triple(3.dp.toPx(), -1.dp.toPx(), Rect(0f, size.height * 0.28f, size.width, size.height * 0.60f))
+            phaseA < 0.92f -> Triple(-3.dp.toPx(), 2.dp.toPx(), Rect(0f, size.height * 0.62f, size.width, size.height * 0.92f))
+            else -> Triple(2.dp.toPx(), -2.dp.toPx(), Rect(0f, size.height * 0.08f, size.width * 0.35f, size.height * 0.92f))
+        }
+        // At rest: faint screen-blend fringe; during burst: strong offset/clipped stroke
+        val alphaA = if (burstA) 0.70f else 0.28f
+        clipRect(clipA.left, clipA.top, clipA.right, clipA.bottom) {
+            drawRect(
+                color = glitchA.copy(alpha = alphaA),
+                topLeft = Offset(oxA - inset, oyA - inset),
+                size = Size(size.width + inset * 2f, size.height + inset * 2f),
+                style = Stroke(width = stroke),
+                blendMode = BlendMode.Screen
+            )
+        }
+
+        // shell-glitch-b (+ occasional glitch-c border)
+        val burstB = phaseB >= 0.84f && phaseB < 0.93f
+        val useC = phaseB in 0.84f..0.87f
+        val (oxB, oyB, clipB) = when {
+            !burstB -> Triple(0f, 0f, Rect(0f, 0f, size.width, size.height))
+            phaseB < 0.87f -> Triple(3.dp.toPx(), -1.dp.toPx(), Rect(0f, 0f, size.width, size.height))
+            phaseB < 0.89f -> Triple(-4.dp.toPx(), 1.dp.toPx(), Rect(0f, size.height * 0.18f, size.width, size.height * 0.52f))
+            phaseB < 0.91f -> Triple(2.dp.toPx(), 2.dp.toPx(), Rect(0f, size.height * 0.55f, size.width, size.height * 0.90f))
+            else -> Triple(-2.dp.toPx(), -1.dp.toPx(), Rect(size.width * 0.58f, size.height * 0.10f, size.width, size.height * 0.90f))
+        }
+        val alphaB = if (burstB) 0.55f else 0.22f
+        val colorB = if (useC) glitchC.copy(alpha = alphaB) else glitchB.copy(alpha = alphaB)
+        clipRect(clipB.left, clipB.top, clipB.right, clipB.bottom) {
+            drawRect(
+                color = colorB,
+                topLeft = Offset(oxB - inset, oyB - inset),
+                size = Size(size.width + inset * 2f, size.height + inset * 2f),
+                style = Stroke(width = stroke),
+                blendMode = BlendMode.Screen
+            )
+            drawRect(
+                color = glitchC.copy(alpha = if (burstB) 0.35f else 0.12f),
+                topLeft = Offset(oxB - inset - 1f, oyB - inset - 1f),
+                size = Size(size.width + inset * 2f + 2f, size.height + inset * 2f + 2f),
+                style = Stroke(width = 1f),
+                blendMode = BlendMode.Screen
+            )
+        }
+    }
+}
+
 @Composable
 fun HudCard(
     modifier: Modifier = Modifier,
     glow: Boolean = true,
+    glitch: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(12.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val c = focoColors()
+    val reduceMotion = LocalReduceMotion.current
+    val shellGlitch = glitch && !reduceMotion
+    // reduceMotion is fixed for the Activity; branch is composition-stable.
+    val glitchMod = if (shellGlitch) {
+        Modifier.shellGlitchBorder(
+            glitchA = c.glitchA,
+            glitchB = c.glitchB,
+            glitchC = c.glitchC,
+            enabled = true,
+            width = 3.dp
+        )
+    } else {
+        Modifier
+    }
     Column(
         modifier = modifier
             .widthIn(max = 448.dp)
             .fillMaxWidth()
             .background(c.surface.copy(alpha = 0.55f), RectangleShape)
             .neonBorder(c.border, width = 3.dp, glow = glow)
+            .then(glitchMod)
             .padding(contentPadding),
         content = content
     )
